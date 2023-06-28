@@ -1,4 +1,4 @@
-CUDA_HOME ?= /opt/cuda
+CUDA_HOME ?= /usr/local/cuda
 CU=$(CUDA_HOME)/bin/nvcc
 CC=clang++
 LIBS=-lcublas
@@ -11,7 +11,7 @@ BUILD=./build
 BIN=./bin
 MAIN_SOURCE=./benchmark
 STD=c++17
-FLAGS=-gencode=arch=compute_75,code=sm_75
+FLAGS=-gencode=arch=compute_80,code=sm_80
 OPTI=-O3  
 DEBUG=--debug -g -G -O0
 PTXAS_FLAGS=--ptxas-options=-v --expt-relaxed-constexpr -lineinfo

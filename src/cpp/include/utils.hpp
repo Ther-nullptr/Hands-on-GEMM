@@ -103,6 +103,19 @@ void generate_csr(csr *mat, float *data)
     }
 }
 
+void genRandomMatrix(double *A, int M, int N)
+{
+    srand(time(NULL)); // Initialization, should only be called once.
+    double a = 5.0;
+    for (int i = 0; i < M; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            A[i * N + j] = (double)rand() / ((double)RAND_MAX / a);
+        }
+    }
+}
+
 void genRandomMatrix(float *A, int M, int N)
 {
     srand(time(NULL)); // Initialization, should only be called once.

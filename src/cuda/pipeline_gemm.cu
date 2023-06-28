@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <vector>
 #include <cuda/pipeline>
+#include <cuda.h>
+#include <cooperative_groups.h>
 
 #ifndef __CUDACC__
 #include "cuda_runtime.h"

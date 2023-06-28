@@ -3,20 +3,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <chrono>
+#include <functional>
+#include <type_traits>
 
 // CUDA runtime
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
+#include <cuda_fp16.h>
 
 #include "cuda_help_func.hpp"
+#include "cuda_utils.hpp"
 #include "utils.hpp"
+#include "cublas_wrapper.hpp"
+#include "sgemm.h"
 
 #define ASIZE(type) (sizeof(type) * M * K)
 #define BSIZE(type) (sizeof(type) * K * N)
 #define CSIZE(type) (sizeof(type) * M * N)
 #define MAXSIZE(type) (sizeof(type) * nmax * nmax)
 
-extern void sgemm(int, int, int, float *, float *, float *, float, float);
+using datatype = double;
 
 int main(int argc, char **argv)
 {
@@ -27,38 +34,44 @@ int main(int argc, char **argv)
     }
     std::vector<int> test_sizes;
     size_t nmax = atoi(argv[1]);
+    printf("MAX_TEST_SIZE: %d\n", nmax);
     bool miss_align = true, ignore_error = false;
     if (argc > 2)
-        miss_align = atoi(argv[2]) == 1;
-    if (argc > 3)
-        ignore_error = atoi(argv[3]) == 1;
+    {
+        ignore_error = atoi(argv[2]) == 1;
+    }
     for (int i = 128; i <= nmax + 127; i += 128)
     {
-        if (miss_align)
-        {
-            test_sizes.emplace_back(i - 1);
-            test_sizes.emplace_back(i + 1);
-        }
         test_sizes.emplace_back(i);
     }
 
     nmax = test_sizes[test_sizes.size() - 1]; // we assume the last element is the largest one
 
-    float *h_A = new float[nmax * nmax];
-    float *h_B = new float[nmax * nmax];
-    float *h_C = new float[nmax * nmax];
-    float *h_C1 = new float[nmax * nmax];
+    datatype *h_A = new datatype[nmax * nmax];
+    datatype *h_B = new datatype[nmax * nmax];
+    datatype *h_C = new datatype[nmax * nmax];
+    datatype *h_C1 = new datatype[nmax * nmax];
 
-    float *d_A;
-    float *d_B;
-    float *d_C;
+    datatype *d_A;
+    datatype *d_B;
+    datatype *d_C;
 
-    checkCudaErrors(cudaMalloc(&d_A, MAXSIZE(float)));
-    checkCudaErrors(cudaMalloc(&d_B, MAXSIZE(float)));
-    checkCudaErrors(cudaMalloc(&d_C, MAXSIZE(float)));
+    checkCudaErrors(cudaMalloc(&d_A, MAXSIZE(datatype)));
+    checkCudaErrors(cudaMalloc(&d_B, MAXSIZE(datatype)));
+    checkCudaErrors(cudaMalloc(&d_C, MAXSIZE(datatype)));
 
     cublasHandle_t blas_handle;
     checkCuBlasErrors(cublasCreate(&blas_handle));
+
+    FILE *fp;
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+    char buffer[32];
+    std::strftime(buffer, 32, "%Y-%m-%d-%H-%M-%S", &tm);
+    std::string filename = std::string(buffer) + ".csv";
+    fp = fopen(filename.c_str(), "a");
+    fprintf(fp, "M, N, K, my gemm, cublas\n");
+    fclose(fp);
 
     for (const auto &i : test_sizes)
     {
@@ -72,24 +85,17 @@ int main(int argc, char **argv)
         double gigaFlops[2] = {0, 0};
         double flopsPerMatrixMul = 2.0 * M * N * K;
 
-        // const int BLOCK_SIZE_M = 96;
-        // const int BLOCK_SIZE_K = 32;
-        // const int BLOCK_SIZE_N = 64;
-        // const int THREAD_SIZE_Y = 6;
-        // const int THREAD_SIZE_X = 4;
-        // const bool ENABLE_DOUBLE_BUFFER = false;
+        datatype alpha = 2.0;
+        datatype beta = 2.0;
 
-        float alpha = 2.0;
-        float beta = 2.0;
-
-        // 生成A的数据
+        // generate data
         genRandomMatrix(h_A, M, K);
         genRandomMatrix(h_B, K, N);
         genRandomMatrix(h_C, M, N);
         copyMatrix(h_C1, h_C, M, N);
 
-        checkCudaErrors(cudaMemcpy(d_A, h_A, ASIZE(float), cudaMemcpyHostToDevice));
-        checkCudaErrors(cudaMemcpy(d_B, h_B, BSIZE(float), cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(d_A, h_A, ASIZE(datatype), cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(d_B, h_B, BSIZE(datatype), cudaMemcpyHostToDevice));
 
         cudaEvent_t start, stop;
         checkCudaErrors(cudaEventCreate(&start));
@@ -97,7 +103,7 @@ int main(int argc, char **argv)
         float msecTotal = 0;
         int nIter = 10;
 
-        checkCudaErrors(cudaMemcpy(d_C, h_C, CSIZE(float), cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(d_C, h_C, CSIZE(datatype), cudaMemcpyHostToDevice));
 
         // dim3 dimBlock(BLOCK_SIZE_N / THREAD_SIZE_X, BLOCK_SIZE_M / THREAD_SIZE_Y);
         // dim3 dimGrid(N / BLOCK_SIZE_N, M / BLOCK_SIZE_M);
@@ -121,23 +127,23 @@ int main(int argc, char **argv)
 
         msecPerMatrixMul[0] = msecTotal / nIter;
         gigaFlops[0] = (flopsPerMatrixMul * 1.0e-9f) / (msecPerMatrixMul[0] / 1000.0f);
-        printf("My gemm Performance= %.2f GFlop/s, Time= %.3f msec, Size= %.0f Ops,\n",
+        printf("My gemm Performance=%.2f GFlop/s, Time=%.3f msec, Size=%.0f Ops,\n",
                gigaFlops[0],
                msecPerMatrixMul[0],
                flopsPerMatrixMul);
 
         // cublas
-        checkCudaErrors(cudaMemcpy(d_C, h_C1, CSIZE(float), cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpy(d_C, h_C1, CSIZE(datatype), cudaMemcpyHostToDevice));
         // warmup here (not sure whether we need this or not)
         checkCuBlasErrors(
-            cublasSgemm(blas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
+            cublasGgemm(blas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
                         N, M, K, &alpha,
                         d_B, N, d_A, K, &beta, d_C, N));
         checkCudaErrors(cudaEventRecord(start));
         for (int run = 0; run < nIter; run++)
         {
             checkCuBlasErrors(
-                cublasSgemm(blas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                cublasGgemm(blas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
                             N, M, K, &alpha,
                             d_B, N, d_A, K, &beta, d_C, N));
         }
@@ -147,23 +153,27 @@ int main(int argc, char **argv)
 
         msecPerMatrixMul[1] = msecTotal / nIter;
         gigaFlops[1] = (flopsPerMatrixMul * 1.0e-9f) / (msecPerMatrixMul[1] / 1000.0f);
-        printf("CuBlas Performance= %.2f GFlop/s, Time= %.3f msec, Size= %.0f Ops,\n",
+        printf("CuBlas Performance=%.2f GFlop/s, Time=%.3f msec, Size=%.0f Ops,\n",
                gigaFlops[1],
                msecPerMatrixMul[1],
                flopsPerMatrixMul);
 
+        // record
+        fp = fopen(filename.c_str(), "a");
+        fprintf(fp, "%d, %d, %d, %.2f, %.2f, %.8f\n", M, N, K, gigaFlops[0], gigaFlops[1], gigaFlops[0] / gigaFlops[1]);
+        fclose(fp);
+
         if (!ignore_error)
         {
-
-            checkCudaErrors(cudaMemcpy(d_C, h_C, CSIZE(float), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(d_C, h_C, CSIZE(datatype), cudaMemcpyHostToDevice));
             sgemm(M, N, K, d_A, d_B, d_C, alpha, beta);
-            checkCudaErrors(cudaMemcpy(h_C, d_C, CSIZE(float), cudaMemcpyDeviceToHost));
-            checkCudaErrors(cudaMemcpy(d_C, h_C1, CSIZE(float), cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(h_C, d_C, CSIZE(datatype), cudaMemcpyDeviceToHost));
+            checkCudaErrors(cudaMemcpy(d_C, h_C1, CSIZE(datatype), cudaMemcpyHostToDevice));
             checkCuBlasErrors(
-                cublasSgemm(blas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                cublasGgemm(blas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
                             N, M, K, &alpha,
                             d_B, N, d_A, K, &beta, d_C, N));
-            checkCudaErrors(cudaMemcpy(h_C1, d_C, CSIZE(float), cudaMemcpyDeviceToHost));
+            checkCudaErrors(cudaMemcpy(h_C1, d_C, CSIZE(datatype), cudaMemcpyDeviceToHost));
 
             double eps = 1.e-6; // machine zero
             for (int i = 0; i < M * N; i++)
