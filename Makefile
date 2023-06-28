@@ -59,6 +59,11 @@ benchmark_%: $(BUILD)/benchmark.o $(BUILD)/%_gemm.o
 	$(CU) $^ -std=$(STD) $(OPTI) -o $(BIN)/$@ $(LIBS) $(FLAGS) $(Wno) $(PTXAS_FLAGS)
 	# sh ${SCRIPT_SOURCE}/$@.sh
 
+debug_%: $(BUILD)/benchmark_debug.o $(BUILD)/%_gemm.o
+	mkdir -p $(BIN)
+	$(CU) $^ -std=$(STD) $(OPTI) -o $(BIN)/$@ $(LIBS) $(FLAGS) $(Wno) $(PTXAS_FLAGS)
+	# sh ${SCRIPT_SOURCE}/$@.sh
+
 sb_%: $(BUILD)/single-benchmark.o $(BUILD)/%_gemm.o
 	mkdir -p $(BIN)
 	$(CU) $^ -std=$(STD) $(OPTI) -o $(BIN)/$@ $(LIBS) $(FLAGS) $(Wno) $(PTXAS_FLAGS)

@@ -24,7 +24,8 @@
 #define CSIZE(type) (sizeof(type) * M * N)
 #define MAXSIZE(type) (sizeof(type) * nmax * nmax)
 
-using datatype = float;
+using datatype = double;
+using datatype_4 = double4;
 
 int main(int argc, char **argv)
 {
@@ -133,13 +134,13 @@ int main(int argc, char **argv)
         //     dimGrid.y++;
 
         // warm up here (not sure whether we need this or not)
-        sgemm(M, N, K, d_A, d_B, d_C, alpha, beta);
+        gemm<datatype, datatype_4>(M, N, K, d_A, d_B, d_C, alpha, beta);
 
         checkCudaErrors(cudaEventRecord(start));
         // printf("Grid Dim: (%d %d) Block Dim: (%d %d)\n", dimGrid.x, dimGrid.y, dimBlock.x, dimBlock.y);
         for (int run = 0; run < nIter; run++)
         {
-            sgemm(M, N, K, d_A, d_B, d_C, alpha, beta);
+            gemm<datatype, datatype_4>(M, N, K, d_A, d_B, d_C, alpha, beta);
         }
         checkCudaErrors(cudaEventRecord(stop));
         checkCudaErrors(cudaEventSynchronize(stop));
@@ -186,7 +187,7 @@ int main(int argc, char **argv)
         if (!ignore_error)
         {
             checkCudaErrors(cudaMemcpy(d_C, h_C, CSIZE(datatype), cudaMemcpyHostToDevice));
-            sgemm(M, N, K, d_A, d_B, d_C, alpha, beta);
+            gemm<datatype, datatype_4>(M, N, K, d_A, d_B, d_C, alpha, beta);
             checkCudaErrors(cudaMemcpy(h_C, d_C, CSIZE(datatype), cudaMemcpyDeviceToHost));
             checkCudaErrors(cudaMemcpy(d_C, h_C1, CSIZE(datatype), cudaMemcpyHostToDevice));
             checkCuBlasErrors(
