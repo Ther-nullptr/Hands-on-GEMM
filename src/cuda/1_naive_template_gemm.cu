@@ -10,6 +10,7 @@ void __syncthreads(); // workaround __syncthreads warning
 #include "sgemm.h"
 #define BLOCK_SIZE 16 // we assume that every block has equal blockDim.x and blockDim.y
 
+// C_new = alpha * A @ B + beta * C
 template <typename T>
 __global__ void matrixMul(const T *A, const T *B, T *C,
                           int M, int N, int K, T alpha, T beta)

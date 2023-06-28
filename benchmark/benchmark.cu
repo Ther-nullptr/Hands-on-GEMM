@@ -6,6 +6,7 @@
 #include <chrono>
 #include <functional>
 #include <type_traits>
+#include <string>
 
 // CUDA runtime
 #include <cuda_runtime.h>
@@ -23,7 +24,7 @@
 #define CSIZE(type) (sizeof(type) * M * N)
 #define MAXSIZE(type) (sizeof(type) * nmax * nmax)
 
-using datatype = double;
+using datatype = float;
 
 int main(int argc, char **argv)
 {
@@ -63,12 +64,31 @@ int main(int argc, char **argv)
     cublasHandle_t blas_handle;
     checkCuBlasErrors(cublasCreate(&blas_handle));
 
+    std::string type_name = "";
+    if (std::is_same<datatype, float>::value)
+    {
+        type_name = "float";
+    }
+    else if (std::is_same<datatype, double>::value)
+    {
+        type_name = "double";
+    }
+    else if (std::is_same<datatype, half>::value)
+    {
+        type_name = "half";
+    }
+    else
+    {
+        printf("Unsupported type!\n");
+        exit(1);
+    }
+
     FILE *fp;
     auto t = std::time(nullptr);
     auto tm = *std::localtime(&t);
     char buffer[32];
     std::strftime(buffer, 32, "%Y-%m-%d-%H-%M-%S", &tm);
-    std::string filename = std::string(buffer) + ".csv";
+    std::string filename = std::string(buffer) + type_name + ".csv";
     fp = fopen(filename.c_str(), "a");
     fprintf(fp, "M, N, K, my gemm, cublas\n");
     fclose(fp);
