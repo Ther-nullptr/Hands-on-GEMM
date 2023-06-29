@@ -1,3 +1,5 @@
 make benchmark_1_naive_template
 make debug_1_naive_template
 make profile_1_naive_template
+
+analyse order: 1_naive -> 2_shared_mem -> 3_warp_tile -> 4_z_thread_map_gemm -> 5_double_buffer_yhs_refine

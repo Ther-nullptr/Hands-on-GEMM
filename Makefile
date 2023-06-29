@@ -18,8 +18,9 @@ PTXAS_FLAGS=--ptxas-options=-v --expt-relaxed-constexpr -lineinfo
 Wno=-Xcudafe "--diag_suppress=declared_but_not_referenced" -Wno-deprecated-gpu-targets
 
 # for profiling
-EXE=./bin/profile_1_naive_template
-CMD_OPT=128
+EXE_DIR=bin
+EXE=profile_4_double_buffer_template
+CMD_OPT=2048
 ARCH=sm_80
 KERNEL=matrixMul
 NCU=/opt/nvidia/nsight-compute/2023.1.0/ncu
@@ -140,13 +141,16 @@ mma_ptx: $(MAIN_SOURCE)/mma_ptx.cu
 	$(CU) -std=$(STD) $(OPTI) $(INCLUDE_DIR) $^ -o $(BIN)/$@  $(FLAGS) $(Wno) $(PTXAS_FLAGS)
 
 run:
-	./$(EXE) $(CMD_OPT)
+	$(EXE_DIR)/$(EXE) $(CMD_OPT)
+
+ncu:
+	$(NCU) $(NCU_FLAG) --target-processes all -f -o profile-$(EXE)-$(CMD_OPT) $(EXE_DIR)/$(EXE) $(CMD_OPT)
 
 ncu_metrics:
-	$(NCU) $(NCU_FLAG) --target-processes all --metrics $(metrics) ./$(EXE) $(CMD_OPT) | tee nsight-compute.csv
+	$(NCU) $(NCU_FLAG) --target-processes all --metrics $(metrics) $(EXE_DIR)/$(EXE) $(CMD_OPT) | tee nsight-compute-$(EXE)-$(CMD_OPT).csv
 
 ncu_roofline:
-	$(NCU) $(NCU_FLAG) --target-processes all $(roofline_section) -o roofline -f ./$(EXE) $(CMD_OPT) 
+	$(NCU) $(NCU_FLAG) --target-processes all $(roofline_section) -o roofline-$(EXE)-$(CMD_OPT) -f $(EXE_DIR)/$(EXE) $(CMD_OPT) 
 
 .PHONY: clean
 clean:

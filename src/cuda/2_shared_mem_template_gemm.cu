@@ -127,7 +127,7 @@ __global__ void matrixMul(const T *A, const T *B, T *C,
 }
 
 template <typename T, typename T4>
-void gemm(int M, int N, int K, T *a, T *b, T *c, T alpha = 1, T beta = 0)
+void gemm(int M, int N, int K, T *a, T *b, T *c, T alpha, T beta)
 {
     dim3 threadsPerBlock(BLOCK_SIZE, BLOCK_SIZE);
     dim3 numBlocks((M + BLOCK_M - 1) / BLOCK_M, (N + BLOCK_N - 1) / BLOCK_N);
