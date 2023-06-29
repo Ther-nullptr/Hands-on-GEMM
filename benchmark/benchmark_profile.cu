@@ -29,8 +29,12 @@ using datatype_4 = double4;
 
 int main(int argc, char **argv)
 {
-    std::vector<int> test_sizes;
-    size_t nmax = 256;
+    if (argc < 2)
+    {
+        printf("Usage: %s <test_size>\n", argv[0]);
+        exit(0);
+    }
+    size_t nmax = atoi(argv[1]);
     printf("MAX_TEST_SIZE: %d\n", nmax);
     bool miss_align = true, ignore_error = false;
 
@@ -94,6 +98,15 @@ int main(int argc, char **argv)
     checkCudaErrors(cudaMemcpy(d_C, h_C, CSIZE(datatype), cudaMemcpyHostToDevice));
 
     gemm<datatype, datatype_4>(M, N, K, d_A, d_B, d_C, alpha, beta);
+
+    // cublas
+    checkCudaErrors(cudaMemcpy(d_C, h_C1, CSIZE(datatype), cudaMemcpyHostToDevice));
+    // warmup here (not sure whether we need this or not)
+    checkCuBlasErrors(
+        cublasGgemm(blas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                    N, M, K, &alpha,
+                    d_B, N, d_A, K, &beta, d_C, N));
+    checkCudaErrors(cudaEventRecord(start));
 
     // Free Memory
     cudaFree(d_A);

@@ -7,7 +7,7 @@
 void __syncthreads(); // workaround __syncthreads warning
 #endif
 #include <iostream>
-#include "sgemm.h"
+#include "gemm.h"
 #define BLOCK_SIZE 16 // we assume that every block has equal blockDim.x and blockDim.y
 
 // C_new = alpha * A @ B + beta * C

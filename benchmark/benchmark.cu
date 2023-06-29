@@ -17,7 +17,7 @@
 #include "cuda_utils.hpp"
 #include "utils.hpp"
 #include "cublas_wrapper.hpp"
-#include "sgemm.h"
+#include "gemm.h"
 
 #define ASIZE(type) (sizeof(type) * M * K)
 #define BSIZE(type) (sizeof(type) * K * N)

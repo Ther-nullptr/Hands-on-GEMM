@@ -4,6 +4,8 @@
 #include <vector>
 #include <cstdio>
 
+#include "gemm.h"
+
 // #define DEBUG
 constexpr size_t BLOCK_SIZE = 16; // we assume that every block has equal blockDim.x and blockDim.y
 constexpr size_t BLOCK_M = 128;   // These const values decide how many thing a thread compute and the amount of shared memory to allocate.
