@@ -1,6 +1,7 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <cuda_fp16.h>
+#include <cublas_api.h>
 
 // float version
 inline cublasStatus_t cublasGgemm(cublasHandle_t handle,
@@ -32,11 +33,11 @@ inline cublasStatus_t cublasGgemm(cublasHandle_t handle,
 inline cublasStatus_t cublasGgemm(cublasHandle_t handle,
         cublasOperation_t transa, cublasOperation_t transb,
         int m, int n, int k,
-        const __half *alpha,
-        const __half *A, int lda,
-        const __half *B, int ldb,
-        const __half *beta,
-        __half *C, int ldc)
+        const half *alpha,
+        const half *A, int lda,
+        const half *B, int ldb,
+        const half *beta,
+        half *C, int ldc)
 {
     return cublasHgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 }

@@ -21,7 +21,7 @@ __global__ void matrixMul(const T *A, const T *B, T *C,
     int baseX = blockIdx.x * blockDim.x;
     int baseY = blockIdx.y * blockDim.y;
 
-    T c = 0;
+    T c = (0.0f);
 
     if (tx < M && ty < N)
     {
@@ -45,3 +45,4 @@ void gemm(int M, int N, int K, T *a, T *b, T *c, T alpha, T beta)
 
 template void gemm<float, float4>(int M, int N, int K, float *a, float *b, float *c, float alpha = 1., float beta = 0.);
 template void gemm<double, double4>(int M, int N, int K, double *a, double *b, double *c, double alpha = 1., double beta = 1.);
+template void gemm<half, half2>(int M, int N, int K, half *a, half *b, half *c, half alpha = __float2half(1.), half beta = __float2half(1.));

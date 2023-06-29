@@ -24,8 +24,8 @@
 #define CSIZE(type) (sizeof(type) * M * N)
 #define MAXSIZE(type) (sizeof(type) * nmax * nmax)
 
-using datatype = double;
-using datatype_4 = double4;
+using datatype = float;
+using datatype_4 = float4;
 
 int main(int argc, char **argv)
 {
@@ -106,8 +106,8 @@ int main(int argc, char **argv)
         double gigaFlops[2] = {0, 0};
         double flopsPerMatrixMul = 2.0 * M * N * K;
 
-        datatype alpha = 2.0;
-        datatype beta = 2.0;
+        datatype alpha = (2.0);
+        datatype beta = (2.0);
 
         // generate data
         genRandomMatrix(h_A, M, K);
@@ -196,17 +196,17 @@ int main(int argc, char **argv)
                             d_B, N, d_A, K, &beta, d_C, N));
             checkCudaErrors(cudaMemcpy(h_C1, d_C, CSIZE(datatype), cudaMemcpyDeviceToHost));
 
-            double eps = 1.e-6; // machine zero
             for (int i = 0; i < M * N; i++)
             {
-                double abs_err = fabs(h_C1[i] - h_C[i]);
+                double abs_err = 0.;
+                double abs_val = 0.;
+                std::tie(abs_err, abs_val) = getError(h_C1[i], h_C[i]);
+                
                 double dot_length = M;
-                double abs_val = fabs(h_C[i]);
                 double rel_err = abs_err / abs_val / dot_length;
-                if (rel_err > eps)
+                bool result = checkError(i, rel_err, h_C, h_C1);
+                if (!result)
                 {
-                    printf("Error! Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n",
-                           i, h_C[i], h_C1[i], eps);
                     exit(1);
                 }
             }

@@ -3,9 +3,11 @@
 #pragma once
 
 #include <iostream>
+#include <type_traits>
+#include <tuple>
 #include "bcsr.hpp"
 #include "csr.hpp"
-#include <type_traits>
+
 
 void cal_block(bcsr *, float *);
 void generate_bcsr(bcsr *, float *);
@@ -129,6 +131,19 @@ void genRandomMatrix(float *A, int M, int N)
     }
 }
 
+void genRandomMatrix(half *A, int M, int N)
+{
+    srand(time(NULL)); // Initialization, should only be called once.
+    float a = 5.0;
+    for (int i = 0; i < M; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            A[i * N + j] = __float2half(rand() /(RAND_MAX / a));
+        }
+    }
+}
+
 void genRandomMatrix(int8_t *A, int M, int N)
 {
     srand(time(NULL)); // Initialization, should only be called once.
@@ -205,7 +220,49 @@ void genSparseMatrix(float *A, int M, int N, int sparsity)
     }
 }
 
-template <class T>
+template <typename T>
+std::tuple<T, T> getError(const T a, const T b)
+{
+    double abs_error = fabs(a - b);
+    double abs_val = fabs(b);
+    return std::make_tuple(abs_error, abs_val);
+}
+
+template <>
+std::tuple<half, half> getError(const half a, const half b)
+{
+    double abs_error = (double)fabs(__half2float(a) - __half2float(b));
+    double abs_val = (double)fabs(__half2float(b));
+    return std::make_tuple(abs_error, abs_val);
+}
+
+template <typename T>
+bool checkError(int i, const double rel_err, const T* h_C, const T* h_C1)
+{
+    double eps = 1e-6;
+    if (rel_err > eps)
+    {
+        printf("rel_err: %f, eps: %f\n", rel_err, eps);
+        printf("Error! Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n", i, h_C[i], h_C1[i], eps);
+        return false;
+    }
+    return true;
+}
+
+template <>
+bool checkError(int i, const double rel_err, const half* h_C, const half* h_C1)
+{
+    double eps = 1e-4;
+    if (rel_err > eps)
+    {
+        printf("rel_err: %f, eps: %f\n", rel_err, eps);
+        printf("Error! Matrix[%05d]=%.8f, ref=%.8f error term is > %E\n", i, __half2float(h_C[i]), __half2float(h_C1[i]), eps);
+        return false;
+    }
+    return true;
+}
+
+template <typename T>
 void copyMatrix(T *des, T *src, size_t M, size_t N)
 {
     for (int i = 0; i < M * N; i++)
