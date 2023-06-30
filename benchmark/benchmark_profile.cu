@@ -24,8 +24,8 @@
 #define CSIZE(type) (sizeof(type) * M * N)
 #define MAXSIZE(type) (sizeof(type) * nmax * nmax)
 
-using datatype = float;
-using datatype_4 = float4;
+using datatype = double;
+using datatype_4 = double4;
 
 int main(int argc, char **argv)
 {

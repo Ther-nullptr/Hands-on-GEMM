@@ -19,8 +19,8 @@ Wno=-Xcudafe "--diag_suppress=declared_but_not_referenced" -Wno-deprecated-gpu-t
 
 # for profiling
 EXE_DIR=bin
-EXE=profile_4_double_buffer_template
-CMD_OPT=2048
+EXE=profile_2_shared_mem_template
+CMD_OPT=128
 ARCH=sm_80
 KERNEL=matrixMul
 NCU=/opt/nvidia/nsight-compute/2023.1.0/ncu

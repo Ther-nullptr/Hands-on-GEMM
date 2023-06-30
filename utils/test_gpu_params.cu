@@ -9,4 +9,5 @@ int main(int argc, char **argv)
     std::cout << "max threads per multiprocessor: " << devProp.maxThreadsPerMultiProcessor << std::endl;
     std::cout << "registers per sm: " << devProp.regsPerMultiprocessor << std::endl;
     std::cout << "shared memory per sm: " << devProp.sharedMemPerMultiprocessor / 1024.0 << " KB" << std::endl;
+    std::cout << "L2 Cache: " << devProp.l2CacheSize / 1024.0 << " KB" << std::endl;
 }
